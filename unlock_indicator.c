@@ -15,13 +15,18 @@
 #include <cairo.h>
 #include <cairo/cairo-xcb.h>
 #include <time.h>
+#include <X11/Xlib.h>
+#include <X11/XKBlib.h>
+#include <X11/extensions/XKBrules.h>
 
 #include "i3lock.h"
 #include "xcb.h"
 #include "unlock_indicator.h"
 #include "xinerama.h"
 
-#define BUTTON_RADIUS 90
+extern int BUTTON_RADIUS;
+extern double PRIMARY_FONT_SIZE;
+extern double SECONDARY_FONT_SIZE;
 #define BUTTON_SPACE (BUTTON_RADIUS + 5)
 #define BUTTON_CENTER (BUTTON_RADIUS + 5)
 #define BUTTON_DIAMETER (2 * BUTTON_SPACE)
@@ -70,12 +75,46 @@ extern char idlecolor[7];
 /* Use 24 hour time format */
 extern bool use24hour;
 
-/* Whether the failed attempts should be displayed. */
-extern bool show_failed_attempts;
-
 /* Number of failed unlock attempts. */
 extern int failed_attempts;
 
+/* The display, to determine if Caps Lock is triggered and to determine keyboard layout*/
+extern Display* _display;
+
+/* Char array holding password */
+extern char password[512];
+
+/* Strings representing keyboard layouts group */
+extern char kb_layouts_group[][3];
+
+/*
+ * Current password length
+ * Symbols from non ASCII table require more than one byte to be stored in password array
+ * so we have to store current password length which determined independently of password string length
+ * Not sure we really need it.
+ * */
+extern int password_length;
+
+/*
+ * Allows user to select main circle opacity
+ * Passes as argument to program with -O option
+ * */
+extern double CIRCLE_OPACITY;
+
+/*
+* Allows user to select main circle opacity.
+* Passes as argument to program with -T option
+* */
+extern double LINE_AND_TEXT_OPACITY;
+
+/* Allows user to select whether he wants see caps lock state */
+extern bool SHOW_CAPS_LOCK_STATE;
+
+/* Allows user to select whether he wants see current keyboard layout */
+extern bool SHOW_KEYBOARD_LAYOUT;
+
+/* Allow user to select whether he wants see input visualisation */
+extern bool SHOW_INPUT_VISUALISATION;
 /*******************************************************************************
  * Variables defined in xcb.c.
  ******************************************************************************/
@@ -87,6 +126,9 @@ extern xcb_screen_t *screen;
  * Local variables.
  ******************************************************************************/
 
+/* Caps lock state string showing when caps lock is active */
+char CAPS_LOCK_STRING[] = "CAPS";
+
 /* Cache the screen’s visual, necessary for creating a Cairo context. */
 static xcb_visualtype_t *vistype;
 
@@ -95,6 +137,12 @@ static xcb_visualtype_t *vistype;
  */
 unlock_state_t unlock_state;
 pam_state_t pam_state;
+
+/* Keyboard state to determine keyboard layout */
+extern XkbStateRec xkbState;
+
+/* Used to determine caps lock state */
+XKeyboardState xKeyboardState;
 
 /*
  * Returns the scaling factor of the current screen. E.g., on a 227 DPI MacBook
@@ -157,14 +205,14 @@ xcb_pixmap_t draw_image(uint32_t *resolution) {
                 cairo_set_source_rgb(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0);
                 break;
             case 'l': /* Line and text */
-                cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, 0.8);
+                cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, LINE_AND_TEXT_OPACITY);
                 break;
             case 'f': /* Fill */
                 /* Use a lighter tint of the user defined color for circle fill */
                 for (int i=0; i < 3; i++) {
                     rgb16[i] = ((255 - rgb16[i]) * .5) + rgb16[i];
                 }
-                cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, 0.2);
+                cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, CIRCLE_OPACITY);
                 break;
         }
         free(rgb16);
@@ -232,7 +280,7 @@ xcb_pixmap_t draw_image(uint32_t *resolution) {
         cairo_stroke(ctx);
 
         /* Display (centered) Time */
-        char *timetext = malloc(6);
+        char *timetext = malloc(10);
 
         time_t curtime = time(NULL);
         struct tm *tm = localtime(&curtime);
@@ -243,7 +291,7 @@ xcb_pixmap_t draw_image(uint32_t *resolution) {
 
         /* Text */
         set_pam_color('l');
-        cairo_set_font_size(ctx, 32.0);
+        cairo_set_font_size(ctx, PRIMARY_FONT_SIZE);
 
         cairo_text_extents_t time_extents;
         double time_x, time_y;
@@ -257,6 +305,74 @@ xcb_pixmap_t draw_image(uint32_t *resolution) {
         cairo_close_path(ctx);
 
         free(timetext);
+
+        /* All other signs we write with secondary font size(0.6 * primary) */
+        cairo_set_font_size(ctx, SECONDARY_FONT_SIZE);
+        /* Input visualisation */
+        if (SHOW_INPUT_VISUALISATION) {
+            /* Set visualisation string */
+            char *input_visualisation = malloc(password_length + 1);
+            memset(input_visualisation, '*', password_length);
+            input_visualisation[password_length] = '\0';
+
+
+            /* Determine position */
+            cairo_text_extents_t input_visualisation_extents;
+            cairo_text_extents(ctx, input_visualisation, &input_visualisation_extents);
+            /* At circle center */
+            double input_visualisation_x = BUTTON_CENTER -
+                                           (input_visualisation_extents.width / 2.0);
+
+            double input_visualisation_y = time_y
+                                           + time_extents.height
+                                           - SECONDARY_FONT_SIZE / 4;
+
+            /* Show visualisation string */
+            cairo_move_to(ctx, input_visualisation_x, input_visualisation_y);
+            cairo_show_text(ctx, input_visualisation);
+            free(input_visualisation);
+        }
+
+        // Keyboard layout
+        if (SHOW_KEYBOARD_LAYOUT) {
+            char *kb_layout = kb_layouts_group[xkbState.group];
+
+            /* Determine position */
+            cairo_text_extents_t kb_layout_extents;
+            cairo_text_extents(ctx, kb_layout, &kb_layout_extents);
+
+            /* Align at right side of time text */
+            double kb_layout_x = BUTTON_CENTER
+                                 + (time_extents.width / 2)
+                                 - kb_layout_extents.width;
+
+            double kb_layout_y = time_y
+                                 - time_extents.height
+                                 - SECONDARY_FONT_SIZE / 4.0;
+            XkbGetState(_display, XkbUseCoreKbd, &xkbState);
+
+            cairo_move_to(ctx, kb_layout_x, kb_layout_y);
+            cairo_show_text(ctx, kb_layouts_group[xkbState.group]);
+            cairo_close_path(ctx);
+        }
+
+
+        /* Caps Lock state */
+        if (SHOW_CAPS_LOCK_STATE) {
+            double caps_lock_state_x = BUTTON_CENTER
+                                       - time_extents.width / 2;
+            double caps_lock_state_y = time_y
+                                       - time_extents.height
+                                       - SECONDARY_FONT_SIZE / 4.0;;
+            XGetKeyboardControl(_display, &xKeyboardState);
+            /* if caps lock is switched on */
+            if (xKeyboardState.led_mask % 2 == 1) {
+                cairo_move_to(ctx, caps_lock_state_x, caps_lock_state_y);
+                cairo_show_text(ctx, CAPS_LOCK_STRING);
+            }
+        }
+
+
 
         /* After the user pressed any valid key or the backspace key, we
          * highlight a random part of the unlock indicator to confirm this

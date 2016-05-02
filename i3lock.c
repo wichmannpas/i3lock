@@ -24,8 +24,12 @@
 #include <sys/mman.h>
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-x11.h>
+#include <ctype.h>
 #include <cairo.h>
 #include <cairo/cairo-xcb.h>
+#include <X11/Xlib.h>
+#include <X11/XKBlib.h>
+#include <X11/extensions/XKBrules.h>
 
 #include "i3lock.h"
 #include "xcb.h"
@@ -53,6 +57,14 @@ char idlecolor[7] = "000000"; // idle
 /* Time format */
 bool use24hour = false;
 
+double CIRCLE_OPACITY = 0.4;
+double LINE_AND_TEXT_OPACITY = 1;
+int BUTTON_RADIUS = 90;
+double PRIMARY_FONT_SIZE = 32.0;
+double SECONDARY_FONT_SIZE = 19.2;
+bool SHOW_CAPS_LOCK_STATE = false;
+bool SHOW_KEYBOARD_LAYOUT = false;
+bool SHOW_INPUT_VISUALISATION = false;
 int inactivity_timeout = 30;
 uint32_t last_resolution[2];
 xcb_window_t win;
@@ -74,7 +86,7 @@ static struct ev_timer *discard_passwd_timeout;
 extern unlock_state_t unlock_state;
 extern pam_state_t pam_state;
 int failed_attempts = 0;
-bool show_failed_attempts = false;
+int password_length = 0;
 
 static struct xkb_state *xkb_state;
 static struct xkb_context *xkb_context;
@@ -86,6 +98,12 @@ cairo_surface_t *img = NULL;
 bool tile = false;
 bool ignore_empty_password = false;
 bool skip_repeated_empty_password = false;
+
+/* The display, to determine if Caps Lock is triggered and to determine keyboard layout*/
+Display* _display;
+
+/* To open Display */
+int _deviceId = XkbUseCoreKbd;
 
 /* isutf, u8_dec © 2005 Jeff Bezanson, public domain */
 #define isutf(c) (((c) & 0xC0) != 0x80)
@@ -208,8 +226,9 @@ static void clear_indicator_cb(EV_P_ ev_timer *w, int revents) {
 
 static void clear_input(void) {
     input_position = 0;
+    password_length = 0;
     clear_password_memory();
-    password[input_position] = '\0';
+    memset(password, '\0', sizeof(password));
 
     /* Hide the unlock indicator after a bit if the password buffer is
      * empty. */
@@ -335,7 +354,9 @@ static void handle_key_press(xcb_key_press_event_t *event) {
         break;
 
     case XKB_KEY_Escape:
-        clear_input();
+        if (input_position != 0)
+            clear_input();
+
         return;
 
     case XKB_KEY_BackSpace:
@@ -345,6 +366,7 @@ static void handle_key_press(xcb_key_press_event_t *event) {
         /* decrement input_position to point to the previous glyph */
         u8_dec(password, &input_position);
         password[input_position] = '\0';
+            password_length--;
 
         /* Hide the unlock indicator after a bit if the password buffer is
          * empty. */
@@ -373,9 +395,10 @@ static void handle_key_press(xcb_key_press_event_t *event) {
         return;
 
     /* store it in the password array as UTF-8 */
-    memcpy(password+input_position, buffer, n-1);
-    input_position += n-1;
+    memcpy(password + input_position, buffer, n - 1);
+    input_position += n - 1;
     DEBUG("current password = %.*s\n", input_position, password);
+    password_length++;
 
     unlock_state = STATE_KEY_ACTIVE;
     redraw_screen();
@@ -571,12 +594,22 @@ static void xcb_check_cb(EV_P_ ev_check *w, int revents) {
                 break;
 
             case XCB_KEY_RELEASE:
+            /*
+             * If not the backspace and not the escape key was released  we have to redraw screen
+             * to update caps lock state and keyboard layout
+             * */
+            if (xkb_state_key_get_one_sym(xkb_state, ((xcb_key_press_event_t*)event)->detail) != XKB_KEY_BackSpace
+                && xkb_state_key_get_one_sym(xkb_state, ((xcb_key_press_event_t*)event)->detail) != XKB_KEY_Escape)
+                    redraw_screen();
+                else
                 /* If this was the backspace or escape key we are back at an
                  * empty input, so turn off the screen if DPMS is enabled, but
                  * only do that after some timeout: maybe user mistyped and
                  * will type again right away */
                 START_TIMER(dpms_timeout, TSTAMP_N_SECS(inactivity_timeout),
                             turn_off_monitors_cb);
+
+
                 break;
 
             case XCB_VISIBILITY_NOTIFY:
@@ -670,16 +703,47 @@ static void raise_loop(xcb_window_t window) {
 int verify_hex(char *arg, char *colortype, char *varname) {
     /* Skip # if present */
     if (arg[0] == '#') {
-        arg++;  
+        arg++;
     }
-        
+
     if (strlen(arg) != 6 || sscanf(arg, "%06[0-9a-fA-F]", colortype) != 1) {
         errx(EXIT_FAILURE, "%s is invalid, it must be given in 3-byte hexadecimal format: rrggbb\n", varname);
 
         return 0;
     }
-        
+
     return 1;
+}
+XkbStateRec xkbState;
+char kb_layouts_group[10][3];
+void build_kb_layout_groups(void){
+    char NO_KEYBOARD[] = "no keyboard";
+    char DEFAULT_XKB_LAYOUT[] = "US";
+    XkbGetState(_display, XkbUseCoreKbd, &xkbState);
+    XkbRF_VarDefsRec vdr;
+    char str[256] = {0};
+    char delimiter[2] = ",";
+    char *token;
+    char* tmp = NULL;
+
+    strncpy(str, (
+                    !_display ? NO_KEYBOARD :
+                    (XkbRF_GetNamesProp(_display, &tmp, &vdr) && vdr.layout) ?
+                    vdr.layout : DEFAULT_XKB_LAYOUT),
+            256);
+    str[255] = 0;
+
+    token = strtok(str, delimiter);
+
+    size_t j = 0;
+    while( token != NULL ) {
+        strcpy(kb_layouts_group[j++], token);
+        token = strtok(NULL, delimiter);
+    }
+
+    for(int  i = 0; i < 10; ++i)
+        for(int j = 0; j < 3; ++j)
+            kb_layouts_group[i][j] = toupper(kb_layouts_group[i][j]);
 }
 
 int main(int argc, char *argv[]) {
@@ -690,99 +754,137 @@ int main(int argc, char *argv[]) {
     int curs_choice = CURS_NONE;
     int o;
     int optind = 0;
+
+    /* Open display to determine keyboard layout */
+    int eventCode;
+    int errorReturn;
+    int major = XkbMajorVersion;
+    int minor = XkbMinorVersion;
+    int reasonReturn;
+    _display = XkbOpenDisplay("", &eventCode, &errorReturn, &major,
+                              &minor, &reasonReturn);
+
     struct option longopts[] = {
-        {"version", no_argument, NULL, 'v'},
-        {"nofork", no_argument, NULL, 'n'},
-        {"beep", no_argument, NULL, 'b'},
-        {"dpms", no_argument, NULL, 'd'},
-        {"color", required_argument, NULL, 'c'},
-        {"pointer", required_argument, NULL , 'p'},
-        {"debug", no_argument, NULL, 0},
-        {"help", no_argument, NULL, 'h'},
-        {"no-unlock-indicator", no_argument, NULL, 'u'},
-        {"image", required_argument, NULL, 'i'},
-        {"tiling", no_argument, NULL, 't'},
-        {"ignore-empty-password", no_argument, NULL, 'e'},
-        {"inactivity-timeout", required_argument, NULL, 'I'},
-        {"show-failed-attempts", no_argument, NULL, 'f'},
-        {"verify-color", required_argument, NULL, 'o'},
-        {"wrong-color", required_argument, NULL, 'w'},
-        {"idle-color", required_argument, NULL, 'l'},
-        {"24", no_argument, NULL, '4'},
-        {NULL, no_argument, NULL, 0}
+            {"24", no_argument, NULL, '4'},
+            {"beep", no_argument, NULL, 'b'},
+            {"color", required_argument, NULL, 'c'},
+            {"dpms", no_argument, NULL, 'd'},
+            {"ignore-empty-password", no_argument, NULL, 'e'},
+            {"help", no_argument, NULL, 'h'},
+            {"image", required_argument, NULL, 'i'},
+            {"idle-color", required_argument, NULL, 'l'},
+            {"nofork", no_argument, NULL, 'n'},
+            {"verify-color", required_argument, NULL, 'o'},
+            {"pointer", required_argument, NULL , 'p'},
+            {"tiling", no_argument, NULL, 't'},
+            {"no-unlock-indicator", no_argument, NULL, 'u'},
+            {"version", no_argument, NULL, 'v'},
+            {"wrong-color", required_argument, NULL, 'w'},
+            {"show-caps-lock-state", no_argument, NULL, 'C'},
+            {"primary-font-size", required_argument, NULL, 'F'},
+            {"inactivity-timeout", required_argument, NULL, 'I'},
+            {"show-layout", no_argument, NULL, 'L'},
+            {"circle-opacity", required_argument, NULL, 'O'},
+            {"button-radius", required_argument, NULL, 'R'},
+            {"line-and-text-opacity", required_argument, NULL, 'T'},
+            {"show-input-visualisation", no_argument, NULL, 'V'},
+            {"debug", no_argument, NULL, 0},
+            {NULL, no_argument, NULL, 0}
     };
 
     if ((username = getenv("USER")) == NULL)
         errx(EXIT_FAILURE, "USER environment variable not set, please set it.\n");
-
-    char *optstring = "hvnbdc:o:w:l:p:ui:teI:f";
+    char *optstring = "bc:def:hi:l:no:p:tu:vw:CF:I:LO:R:T:V";
     while ((o = getopt_long(argc, argv, optstring, longopts, &optind)) != -1) {
         switch (o) {
-        case 'v':
-            errx(EXIT_SUCCESS, "version " VERSION " © 2010-2012 Michael Stapelberg");
-        case 'n':
-            dont_fork = true;
-            break;
-        case 'b':
-            beep = true;
-            break;
-        case 'd':
-            dpms = true;
-            break;
-        case 'I': {
-            int time = 0;
-            if (sscanf(optarg, "%d", &time) != 1 || time < 0)
-                errx(EXIT_FAILURE, "invalid timeout, it must be a positive integer\n");
-            inactivity_timeout = time;
-            break;
-        }
-        case 'c': 
-            verify_hex(optarg,color, "color");
-            break;
-        case 'o':
-            verify_hex(optarg,verifycolor, "verifycolor");
-            break;
-        case 'w':
-            verify_hex(optarg,wrongcolor, "wrongcolor");
-            break;
-        case 'l':
-            verify_hex(optarg,idlecolor, "idlecolor");
-            break;
-        case '4':
-            use24hour = true;
-            break;
-        case 'u':
-            unlock_indicator = false;
-            break;
-        case 'i':
-            image_path = strdup(optarg);
-            break;
-        case 't':
-            tile = true;
-            break;
-        case 'p':
-            if (!strcmp(optarg, "win")) {
-                curs_choice = CURS_WIN;
-            } else if (!strcmp(optarg, "default")) {
-                curs_choice = CURS_DEFAULT;
-            } else {
-                errx(EXIT_FAILURE, "i3lock: Invalid pointer type given. Expected one of \"win\" or \"default\".\n");
+            case '4':
+                use24hour = true;
+                break;
+            case 'b':
+                beep = true;
+                break;
+            case 'c':
+                verify_hex(optarg,color, "color");
+                break;
+            case 'd':
+                dpms = true;
+                break;
+            case 'e':
+                ignore_empty_password = true;
+                break;
+            case 'i':
+                image_path = strdup(optarg);
+                break;
+            case 'l':
+                verify_hex(optarg,idlecolor, "idlecolor");
+                break;
+            case 'n':
+                dont_fork = true;
+                break;
+            case 'o':
+                verify_hex(optarg,verifycolor, "verifycolor");
+                break;
+            case 'p':
+                if (!strcmp(optarg, "win")) {
+                    curs_choice = CURS_WIN;
+                } else if (!strcmp(optarg, "default")) {
+                    curs_choice = CURS_DEFAULT;
+                } else {
+                    errx(EXIT_FAILURE, "i3lock: Invalid pointer type given. Expected one of \"win\" or \"default\".\n");
+                }
+                break;
+            case 't':
+                tile = true;
+                break;
+            case 'u':
+                unlock_indicator = false;
+                break;
+            case 'v':
+                errx(EXIT_SUCCESS, "version " VERSION " © 2010-2012 Michael Stapelberg");
+            case 'w':
+                verify_hex(optarg,wrongcolor, "wrongcolor");
+                break;
+            case 'C':
+                SHOW_CAPS_LOCK_STATE = true;
+                break;
+            case 'F':
+                sscanf(optarg, "%lf", &PRIMARY_FONT_SIZE);
+                SECONDARY_FONT_SIZE = PRIMARY_FONT_SIZE * 0.6;
+                break;
+            case 'I': {
+                int time = 0;
+                if (sscanf(optarg, "%d", &time) != 1 || time < 0)
+                    errx(EXIT_FAILURE, "invalid timeout, it must be a positive integer\n");
+                inactivity_timeout = time;
+                break;
             }
-            break;
-        case 'e':
-            ignore_empty_password = true;
-            break;
-        case 0:
-            if (strcmp(longopts[optind].name, "debug") == 0)
-                debug_mode = true;
-            break;
-        case 'f':
-            show_failed_attempts = true;
-            break;
-        default:
-            errx(EXIT_FAILURE, "Syntax: i3lock [-v] [-n] [-b] [-d] [-c color] [-o color] [-w color] [-l color] [-u] [-p win|default]"
-            " [-i image.png] [-t] [-e] [-I] [-f] [--24]"
-            );
+            case 'L':
+                SHOW_KEYBOARD_LAYOUT = true;
+                break;
+            case 'O':
+                sscanf(optarg, "%lf", &CIRCLE_OPACITY);
+                break;
+            case 'R':
+                sscanf(optarg, "%d", &BUTTON_RADIUS);
+                break;
+            case 'T':
+                sscanf(optarg, "%lf", &LINE_AND_TEXT_OPACITY);
+                break;
+            case 'V':
+                SHOW_INPUT_VISUALISATION = true;
+                break;
+            case 0:
+                if (strcmp(longopts[optind].name, "debug") == 0)
+                    debug_mode = true;
+                break;
+            default:
+                errx(EXIT_FAILURE, "Syntax: i3lock [-v] [-n] [-b] [-d] [-c color] [-o color] [-w color] [-l color] [-u] [-p win|default]"
+                        " [-i image.png] [-t] [-e] [-I] [--24]"
+                        " [-C show-caps-lock-state] [-F primary-font-size]"
+                        " [-L show-keyboard-layout] [-O circle-opacity]"
+                        " [-R button-radius] [-T line-and-text-opacity]"
+                        " [-V show-input-visualisation]"
+                );
         }
     }
 
@@ -886,6 +988,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    build_kb_layout_groups();
     /* Pixmap on which the image is rendered to (if any) */
     xcb_pixmap_t bg_pixmap = draw_image(last_resolution);
 

@@ -16,6 +16,8 @@ LIBS += $(shell pkg-config --libs cairo xcb-dpms xcb-xinerama xcb-atom xcb-image
 LIBS += -lpam
 LIBS += -lev
 LIBS += -lm
+LIBS += -lX11
+LIBS += -lxkbfile
 
 FILES:=$(wildcard *.c)
 FILES:=$(FILES:.c=.o)
