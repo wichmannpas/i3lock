@@ -208,10 +208,6 @@ xcb_pixmap_t draw_image(uint32_t *resolution) {
                 cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, LINE_AND_TEXT_OPACITY);
                 break;
             case 'f': /* Fill */
-                /* Use a lighter tint of the user defined color for circle fill */
-                for (int i=0; i < 3; i++) {
-                    rgb16[i] = ((255 - rgb16[i]) * .5) + rgb16[i];
-                }
                 cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, CIRCLE_OPACITY);
                 break;
         }
