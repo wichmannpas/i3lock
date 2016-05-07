@@ -785,14 +785,11 @@ int main(int argc, char *argv[]) {
             {"no-unlock-indicator", no_argument, NULL, 'u'},
             {"version", no_argument, NULL, 'v'},
             {"wrong-color", required_argument, NULL, 'w'},
-            //{"show-caps-lock-state", no_argument, NULL, 'C'},
             {"primary-font-size", required_argument, NULL, 'F'},
             {"inactivity-timeout", required_argument, NULL, 'I'},
-            //{"show-layout", no_argument, NULL, 'L'},
             {"circle-opacity", required_argument, NULL, 'O'},
             {"button-radius", required_argument, NULL, 'R'},
             {"line-and-text-opacity", required_argument, NULL, 'T'},
-            //{"show-input-visualisation", no_argument, NULL, 'V'},
             {"unlock-indicator-position-x", required_argument, NULL, 'X'},
             {"unlock-indicator-position-y", required_argument, NULL, 'Y'},
             {"no-caps-lock-state", no_argument, &SHOW_CAPS_LOCK_STATE, 0},
@@ -888,10 +885,11 @@ int main(int argc, char *argv[]) {
             default:
                 errx(EXIT_FAILURE, "Syntax: i3lock [-v] [-n] [-b] [-d] [-c color] [-o color] [-w color] [-l color] [-u] [-p win|default]"
                         " [-i image.png] [-t] [-e] [-I] [--24]"
-                        " [-C show-caps-lock-state] [-F primary-font-size]"
-                        " [-L show-keyboard-layout] [-O circle-opacity]"
+                        " [--no-caps-lock-state] [-F primary-font-size]"
+                        " [--no-keyboard-layout] [-O circle-opacity]"
                         " [-R button-radius] [-T line-and-text-opacity]"
-                        " [-V show-input-visualisation]"
+                        " [--no-input-visualisation] [-X x-offset]"
+                        " [-Y y-offset]"
                 );
         }
     }
