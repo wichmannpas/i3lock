@@ -115,6 +115,15 @@ extern bool SHOW_KEYBOARD_LAYOUT;
 
 /* Allow user to select whether he wants see input visualisation */
 extern bool SHOW_INPUT_VISUALISATION;
+
+/* Allow user to select unlock indicator position */
+extern bool USE_CUSTOM_INDICATOR_POSITION;
+
+/* User specified offsets of the unlock indicator from right bottom corner */
+extern int unlock_indicator_offset_x;
+extern int unlock_indicator_offset_y;
+
+
 /*******************************************************************************
  * Variables defined in xcb.c.
  ******************************************************************************/
@@ -208,6 +217,12 @@ xcb_pixmap_t draw_image(uint32_t *resolution) {
                 cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, LINE_AND_TEXT_OPACITY);
                 break;
             case 'f': /* Fill */
+                /* Use a lighter tint of the user defined color for circle fill */
+
+                for (int i=0; i < 3; i++) {
+                    rgb16[i] = ((255 - rgb16[i]) * .5) + rgb16[i];
+                }
+
                 cairo_set_source_rgba(cr, rgb16[0] / 255.0, rgb16[1] / 255.0, rgb16[2] / 255.0, CIRCLE_OPACITY);
                 break;
         }
@@ -417,20 +432,39 @@ xcb_pixmap_t draw_image(uint32_t *resolution) {
     }
 
     if (xr_screens > 0) {
-        /* Composite the unlock indicator in the middle of each screen. */
+        /* for each screen */
         for (int screen = 0; screen < xr_screens; screen++) {
-            int x = (xr_resolutions[screen].x + ((xr_resolutions[screen].width / 2) - (button_diameter_physical / 2)));
-            int y = (xr_resolutions[screen].y + ((xr_resolutions[screen].height / 2) - (button_diameter_physical / 2)));
+            int x, y;
+            if (USE_CUSTOM_INDICATOR_POSITION){
+                /* Composite the unlock indicator in the right bottom corner with user specified offsets. */
+                x = xr_resolutions[screen].x + xr_resolutions[screen].width - button_diameter_physical / 2 - unlock_indicator_offset_x;
+                y = xr_resolutions[screen].y + xr_resolutions[screen].height - button_diameter_physical / 2 - unlock_indicator_offset_y;
+            } else {
+                /* Composite the unlock indicator in the middle of each screen. */
+                x = (xr_resolutions[screen].x +
+                         ((xr_resolutions[screen].width / 2) - (button_diameter_physical / 2)));
+                y = (xr_resolutions[screen].y +
+                         ((xr_resolutions[screen].height / 2) - (button_diameter_physical / 2)));
+            }
             cairo_set_source_surface(xcb_ctx, output, x, y);
             cairo_rectangle(xcb_ctx, x, y, button_diameter_physical, button_diameter_physical);
             cairo_fill(xcb_ctx);
         }
     } else {
-        /* We have no information about the screen sizes/positions, so we just
-         * place the unlock indicator in the middle of the X root window and
-         * hope for the best. */
-        int x = (last_resolution[0] / 2) - (button_diameter_physical / 2);
-        int y = (last_resolution[1] / 2) - (button_diameter_physical / 2);
+        /* We have no information about the screen sizes/positions */
+        int x, y;
+        if (!USE_CUSTOM_INDICATOR_POSITION) {
+            /* Place the unlock indicator in the middle of the X root window and
+             * hope for the best. */
+            x = (last_resolution[0] / 2) - (button_diameter_physical / 2);
+            y = (last_resolution[1] / 2) - (button_diameter_physical / 2);
+        } else {
+            /* Place the unlock indicator in the bottom right corner of the X root
+             * window with user specified offsets*/
+            x = last_resolution[0] - button_diameter_physical / 2 - unlock_indicator_offset_x;
+            y = last_resolution[1] - button_diameter_physical / 2 - unlock_indicator_offset_y;
+        }
+
         cairo_set_source_surface(xcb_ctx, output, x, y);
         cairo_rectangle(xcb_ctx, x, y, button_diameter_physical, button_diameter_physical);
         cairo_fill(xcb_ctx);

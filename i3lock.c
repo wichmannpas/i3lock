@@ -65,6 +65,9 @@ double SECONDARY_FONT_SIZE = 19.2;
 bool SHOW_CAPS_LOCK_STATE = false;
 bool SHOW_KEYBOARD_LAYOUT = false;
 bool SHOW_INPUT_VISUALISATION = false;
+bool USE_CUSTOM_INDICATOR_POSITION = false;
+int unlock_indicator_offset_x;
+int unlock_indicator_offset_y;
 int inactivity_timeout = 30;
 uint32_t last_resolution[2];
 xcb_window_t win;
@@ -788,13 +791,15 @@ int main(int argc, char *argv[]) {
             {"button-radius", required_argument, NULL, 'R'},
             {"line-and-text-opacity", required_argument, NULL, 'T'},
             {"show-input-visualisation", no_argument, NULL, 'V'},
+            {"unlock-indicator-position-x", required_argument, NULL, 'X'},
+            {"unlock-indicator-position-y", required_argument, NULL, 'Y'},
             {"debug", no_argument, NULL, 0},
             {NULL, no_argument, NULL, 0}
     };
 
     if ((username = getenv("USER")) == NULL)
         errx(EXIT_FAILURE, "USER environment variable not set, please set it.\n");
-    char *optstring = "bc:def:hi:l:no:p:tu:vw:CF:I:LO:R:T:V";
+    char *optstring = "bc:def:hi:l:no:p:tu:vw:CF:I:LO:R:T:VX:Y:";
     while ((o = getopt_long(argc, argv, optstring, longopts, &optind)) != -1) {
         switch (o) {
             case '4':
@@ -873,6 +878,13 @@ int main(int argc, char *argv[]) {
             case 'V':
                 SHOW_INPUT_VISUALISATION = true;
                 break;
+            case 'X':
+                USE_CUSTOM_INDICATOR_POSITION = true;
+                sscanf(optarg, "%d", &unlock_indicator_offset_x);
+                break;
+            case 'Y':
+                USE_CUSTOM_INDICATOR_POSITION = true;
+                sscanf(optarg, "%d", &unlock_indicator_offset_y);
             case 0:
                 if (strcmp(longopts[optind].name, "debug") == 0)
                     debug_mode = true;
