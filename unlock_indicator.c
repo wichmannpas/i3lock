@@ -108,13 +108,13 @@ extern double CIRCLE_OPACITY;
 extern double LINE_AND_TEXT_OPACITY;
 
 /* Allows user to select whether he wants see caps lock state */
-extern bool SHOW_CAPS_LOCK_STATE;
+extern int SHOW_CAPS_LOCK_STATE;
 
 /* Allows user to select whether he wants see current keyboard layout */
-extern bool SHOW_KEYBOARD_LAYOUT;
+extern int SHOW_KEYBOARD_LAYOUT;
 
 /* Allow user to select whether he wants see input visualisation */
-extern bool SHOW_INPUT_VISUALISATION;
+extern int SHOW_INPUT_VISUALISATION;
 
 /* Allow user to select unlock indicator position */
 extern bool USE_CUSTOM_INDICATOR_POSITION;

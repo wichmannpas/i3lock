@@ -62,9 +62,11 @@ double LINE_AND_TEXT_OPACITY = 1;
 int BUTTON_RADIUS = 90;
 double PRIMARY_FONT_SIZE = 32.0;
 double SECONDARY_FONT_SIZE = 19.2;
-bool SHOW_CAPS_LOCK_STATE = false;
-bool SHOW_KEYBOARD_LAYOUT = false;
-bool SHOW_INPUT_VISUALISATION = false;
+/* They should have been to have a bool type,
+ * but getopt_long forces them to be an int */
+int SHOW_CAPS_LOCK_STATE = true;
+int SHOW_KEYBOARD_LAYOUT = true;
+int SHOW_INPUT_VISUALISATION = true;
 bool USE_CUSTOM_INDICATOR_POSITION = false;
 int unlock_indicator_offset_x;
 int unlock_indicator_offset_y;
@@ -783,23 +785,26 @@ int main(int argc, char *argv[]) {
             {"no-unlock-indicator", no_argument, NULL, 'u'},
             {"version", no_argument, NULL, 'v'},
             {"wrong-color", required_argument, NULL, 'w'},
-            {"show-caps-lock-state", no_argument, NULL, 'C'},
+            //{"show-caps-lock-state", no_argument, NULL, 'C'},
             {"primary-font-size", required_argument, NULL, 'F'},
             {"inactivity-timeout", required_argument, NULL, 'I'},
-            {"show-layout", no_argument, NULL, 'L'},
+            //{"show-layout", no_argument, NULL, 'L'},
             {"circle-opacity", required_argument, NULL, 'O'},
             {"button-radius", required_argument, NULL, 'R'},
             {"line-and-text-opacity", required_argument, NULL, 'T'},
-            {"show-input-visualisation", no_argument, NULL, 'V'},
+            //{"show-input-visualisation", no_argument, NULL, 'V'},
             {"unlock-indicator-position-x", required_argument, NULL, 'X'},
             {"unlock-indicator-position-y", required_argument, NULL, 'Y'},
+            {"no-caps-lock-state", no_argument, &SHOW_CAPS_LOCK_STATE, 0},
+            {"no-input-visualisation", no_argument, &SHOW_INPUT_VISUALISATION, 0},
+            {"no-keyboard-layout", no_argument, &SHOW_KEYBOARD_LAYOUT, 0},
             {"debug", no_argument, NULL, 0},
             {NULL, no_argument, NULL, 0}
     };
 
     if ((username = getenv("USER")) == NULL)
         errx(EXIT_FAILURE, "USER environment variable not set, please set it.\n");
-    char *optstring = "bc:def:hi:l:no:p:tu:vw:CF:I:LO:R:T:VX:Y:";
+    char *optstring = "bc:def:hi:l:no:p:tu:vw:F:I:O:R:T:X:Y:";
     while ((o = getopt_long(argc, argv, optstring, longopts, &optind)) != -1) {
         switch (o) {
             case '4':
@@ -849,9 +854,6 @@ int main(int argc, char *argv[]) {
             case 'w':
                 verify_hex(optarg,wrongcolor, "wrongcolor");
                 break;
-            case 'C':
-                SHOW_CAPS_LOCK_STATE = true;
-                break;
             case 'F':
                 sscanf(optarg, "%lf", &PRIMARY_FONT_SIZE);
                 SECONDARY_FONT_SIZE = PRIMARY_FONT_SIZE * 0.6;
@@ -863,9 +865,6 @@ int main(int argc, char *argv[]) {
                 inactivity_timeout = time;
                 break;
             }
-            case 'L':
-                SHOW_KEYBOARD_LAYOUT = true;
-                break;
             case 'O':
                 sscanf(optarg, "%lf", &CIRCLE_OPACITY);
                 break;
@@ -874,9 +873,6 @@ int main(int argc, char *argv[]) {
                 break;
             case 'T':
                 sscanf(optarg, "%lf", &LINE_AND_TEXT_OPACITY);
-                break;
-            case 'V':
-                SHOW_INPUT_VISUALISATION = true;
                 break;
             case 'X':
                 USE_CUSTOM_INDICATOR_POSITION = true;
