@@ -1,4 +1,4 @@
-This is my i3lock fork of Lixxia's copy.
+This is my i3lock fork of [Lixxia's copy](https://github.com/Lixxia/i3lock).
 
 It has following differences:
 
@@ -10,10 +10,7 @@ It has following differences:
  - Specify **circle opacity**(**'-O'** option, default 0.4)
  - Specify **border and text opacity**(**'-T'** option default 1)
  - Specify unlock indicator **position** providing **'-X'** and **'-Y'** arguments with desired x and y offsets from **right bottom corner**(see screenshots below)
-## Example Usage
-```
-'i3lock -i ~/Pictures/wallpaper.png -c '#000000' -o '#191d0f' -w '#572020' -l '#000000' -e -V -C -L'
-```
+
 ## Screenshots
 #### Default
 ```
