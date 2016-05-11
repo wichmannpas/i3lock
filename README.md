@@ -55,4 +55,4 @@ i3lock -i ~/Pictures/wallpaper.png
 ```
 'i3lock -i ~/Pictures/wallpaper.png -R 1300 -F 100 -X 400 -Y 200'
 ```
-![Offset](/screenshots/bigRadiusAndFontSizeXY.png?raw=true "")
+![Offset](/screenshots/bigRadiusAndFontSizeXYOffset.png?raw=true "")
