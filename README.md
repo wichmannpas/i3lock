@@ -2,14 +2,14 @@ This is my fork of [Lixxia's i3lock copy](https://github.com/Lixxia/i3lock).
 
 It has following differences:
 
- - Display current **keyboard layout**(used source files of [xkb-switch]( https://github.com/ierton/xkb-switch )). Use **"--no-keyboard-layout"** option to turn it off
- - Display **caps lock state** (if it's active the "CAPS" label will appear). Use **"--no-caps-lock-state"** option to turn it off
- - Display **input visualisation**: as you type your password appears string with asteriks showing number of characters. Use **"--no-input-visualisation"** to turn it off
- - Specify **button radius**(**'-R'** option, default 90)
- - Specify time **font size**(a.k.a. PRIMARY_FONT_SIZE in source code), (**'-F'** option, default 32)
- - Specify **circle opacity**(**'-O'** option, default 0.4)
+ - Indicates current **keyboard layout** (used source files of [xkb-switch]( https://github.com/ierton/xkb-switch )). Use **"--no-keyboard-layout"** option to turn it off
+ - Indicates **caps lock state** (if it's active the "CAPS" label will appear). Use **"--no-caps-lock-state"** option to turn it off
+ - Indicates **input visualization**: as you type your password string with asterisk showing number of typed characters appears. Use **"--no-input-visualization"** to turn it off
+ - Specify **button radius** (**'-R'** option, default 90)
+ - Specify time **font size** (**'-F'** option, default 32)
+ - Specify **circle opacity** (**'-O'** option, default 0.4)
  - Specify **border and text opacity**(**'-T'** option default 1)
- - Specify unlock indicator **position** providing **'-X'** and **'-Y'** arguments with desired x and y offsets from **right bottom corner**(see screenshots below)
+ - Specify unlock indicator **position** providing **'-X'** and **'-Y'** arguments with desired x and y offsets from **right bottom corner** (see screenshots below)
 
 ## Screenshots
 #### Default
