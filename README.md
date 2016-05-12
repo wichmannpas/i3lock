@@ -23,17 +23,17 @@ It has following differences:
 #### Backspace
 ![Backspace](/screenshots/defaultBehaviourBackspace.png?raw=true"")
 
-#### Using -R option allows user to specify radius of the indicator
+#### -R option allows user to specify radius of the indicator
 	'i3lock -i ~/Pictures/wallpaper.png -R 150'
 
 !['-R'](/screenshots/usingROption.png?raw=true "")
 
-#### With '-F' option user can specify font size
+#### Specify font size with '-F' option
 	'i3lock -i ~/Pictures/wallpaper.png -R 150 -F 50'
 
 !['-R', '-F'](/screenshots/usingRAndFOptions.png?raw=true "")
 
-#### Also user can pass a big radius
+#### Pass a big radius
 	'/i3lock -i ~/Pictures/wallpaper.png -R 800'
 
 ![Big radius](/screenshots/bigRadius.png?raw=true "")
@@ -43,7 +43,7 @@ It has following differences:
 
 ![Big radius and big font](/screenshots/bigRadiusAndFontSize.png?raw=true "")
 
-#### User can do even something like this(with '-X' and '-Y' options)
+#### Or do even something like this(with '-X' and '-Y' options)
 	'i3lock -i ~/Pictures/wallpaper.png -R 1300 -F 100 -X 400 -Y 200'
 
 ![Offset](/screenshots/bigRadiusAndFontSizeXYOffset.png?raw=true "")
