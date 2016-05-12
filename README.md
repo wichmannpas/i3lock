@@ -1,4 +1,4 @@
-This is my i3lock fork of [Lixxia's copy](https://github.com/Lixxia/i3lock).
+This is my fork of [Lixxia's i3lock copy](https://github.com/Lixxia/i3lock).
 
 It has following differences:
 
@@ -13,43 +13,43 @@ It has following differences:
 
 ## Screenshots
 #### Default
-```
-i3lock -i ~/Pictures/wallpaper.png
-```
+	i3lock -i ~/Pictures/wallpaper.png
+
 ![Default state](/screenshots/defaultBehaviour.png?raw=true "")
 #### Key Press
 ![On key press](/screenshots/defaultBehaviourKeyPress.png?raw=true "")
 #### Verifying
-![Veryfing](/screenshots/defaultBehaviourVerifying.png?raw=true "")
+![Verifying](/screenshots/defaultBehaviourVerifying.png?raw=true "")
 #### Backspace
 ![Backspace](/screenshots/defaultBehaviourBackspace.png?raw=true"")
 
 #### Using -R option allows user to specify radius of the indicator
-```
-'i3lock -i ~/Pictures/wallpaper.png -R 150'
-```
+	'i3lock -i ~/Pictures/wallpaper.png -R 150'
+
 !['-R'](/screenshots/usingROption.png?raw=true "")
 
 #### With '-F' option user can specify font size
-```
-'i3lock -i ~/Pictures/wallpaper.png -R 150 -F 50'
-```
+	'i3lock -i ~/Pictures/wallpaper.png -R 150 -F 50'
+
 !['-R', '-F'](/screenshots/usingRAndFOptions.png?raw=true "")
 
-#### Also you can pass a big radius
-```
-'/i3lock -i ~/Pictures/wallpaper.png -R 800'
-```
+#### Also user can pass a big radius
+	'/i3lock -i ~/Pictures/wallpaper.png -R 800'
+
 ![Big radius](/screenshots/bigRadius.png?raw=true "")
 
-#### And combine it with specifying font size
-```
-'/i3lock -i ~/Pictures/wallpaper.png -R 800 -F 100'
-```
+#### And combine it with specific font size
+	'/i3lock -i ~/Pictures/wallpaper.png -R 800 -F 100'
+
 ![Big radius and big font](/screenshots/bigRadiusAndFontSize.png?raw=true "")
 
-#### Even user can do something like this(with '-X' and '-Y' options)
-```
-'i3lock -i ~/Pictures/wallpaper.png -R 1300 -F 100 -X 400 -Y 200'
-```
+#### User can do even something like this(with '-X' and '-Y' options)
+	'i3lock -i ~/Pictures/wallpaper.png -R 1300 -F 100 -X 400 -Y 200'
+
 ![Offset](/screenshots/bigRadiusAndFontSizeXYOffset.png?raw=true "")
+
+## Installation
+
+	$ git clone https://github.com/cac03/i3lock.git
+	$ cd i3lock
+	# make install
