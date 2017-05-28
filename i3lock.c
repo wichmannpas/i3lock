@@ -329,6 +329,15 @@ static void handle_key_press(xcb_key_press_event_t *event) {
     n = xkb_keysym_to_utf8(ksym, buffer, sizeof(buffer));
 
     switch (ksym) {
+    case 269025046: // XF86MediaPrev
+        system("playerctl previous &");
+        return;
+    case 269025044: // XF86MediaPlayPause
+        system("playerctl play-pause &");
+        return;
+    case 269025047: // XF86MediaNext
+        system("playerctl next &");
+        return;
     case XKB_KEY_Return:
     case XKB_KEY_KP_Enter:
     case XKB_KEY_XF86ScreenSaver:
