@@ -327,7 +327,6 @@ static void handle_key_press(xcb_key_press_event_t *event) {
     /* The buffer will be null-terminated, so n >= 2 for 1 actual character. */
     memset(buffer, '\0', sizeof(buffer));
     n = xkb_keysym_to_utf8(ksym, buffer, sizeof(buffer));
-
     switch (ksym) {
     case 269025046: // XF86MediaPrev
         system("playerctl previous &");
@@ -337,6 +336,15 @@ static void handle_key_press(xcb_key_press_event_t *event) {
         return;
     case 269025047: // XF86MediaNext
         system("playerctl next &");
+        return;
+    case 269025041: // XF86AudioLowerVolume
+        system("pactl set-sink-volume `cat $HOME/.i3/audio_device` -5% &");
+        return;
+    case 269025042: // XF86AudioMute
+        system("pactl set-sink-mute `cat $HOME/.i3/audio_device` toggle &");
+        return;
+    case 269025043: // XF86AudioRaiseVolume
+        system("pactl set-sink-volume `cat $HOME/.i3/audio_device` +5% &");
         return;
     case XKB_KEY_Return:
     case XKB_KEY_KP_Enter:
