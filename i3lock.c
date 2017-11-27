@@ -346,6 +346,12 @@ static void handle_key_press(xcb_key_press_event_t *event) {
     case 269025043: // XF86AudioRaiseVolume
         system("pactl set-sink-volume `cat $HOME/.i3/audio_device` +5% &");
         return;
+    case 65470: // F1
+        system("~/dock_off &");
+        return;
+    case 65471: // F2
+        system("~/dock_on &");
+        return;
     case XKB_KEY_Return:
     case XKB_KEY_KP_Enter:
     case XKB_KEY_XF86ScreenSaver:
