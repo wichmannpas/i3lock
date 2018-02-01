@@ -352,6 +352,9 @@ static void handle_key_press(xcb_key_press_event_t *event) {
     case 65471: // F2
         system("~/dock_on &");
         return;
+    case 65481: // F12
+        system("sudo /usr/local/sbin/suspend");
+        return;
     case XKB_KEY_Return:
     case XKB_KEY_KP_Enter:
     case XKB_KEY_XF86ScreenSaver:
